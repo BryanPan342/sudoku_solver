@@ -1,2 +1,2 @@
 # Sudoku Solver
-I thought it would be cool to make this so whipped it up one morning for fun.
+I thought it would be cool to implement something that could solve a sudoku so I whipped this up one morning.
