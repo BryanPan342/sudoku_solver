@@ -1,10 +1,19 @@
 import argparse
 import numpy as np
 from copy import copy, deepcopy
+import time
 
-##### UNIVERSAL DATA STRUCTURES #####
+##### UNIVERSAL UTILITY #####
 def combine(X, Y):
     return [x+y for x in X for y in Y]
+
+def show(values):
+    max_width = 1+max(len(values[index]) for index in super_matrix)
+    divider = '+'.join(['-'*max_width*3]*3)
+    for c in chars:
+        print(''.join(values[c+n].center(max_width)+('|' if n in '36' else '') for n in numbers))
+        if c in 'CF':
+            print(divider)
 
 numbers         = '123456789'
 chars           = 'ABCDEFGHI'
@@ -18,10 +27,11 @@ c_index_dict    = dict((index, set(sum(index_dict[index],[])) - set([index])) fo
 
 ##### ARGUMENT PARSING #####
 parser = argparse.ArgumentParser(description='Sudoku Solver')
+parser.add_argument("--file", "-f", type=str, required=True, help='Input File')
 args = parser.parse_args()
 
 ##### SUDOKU CONSTRAINTS #####
-def reduce(values, index, val):
+def reduce_grid(values, index, val):
     if val not in values[index]:
         return values
     values[index] = values[index].replace(val,'')
@@ -29,81 +39,77 @@ def reduce(values, index, val):
         return False
     elif len(values[index]) == 1:
         singular_val = values[index]
-        if not all(reduce(values, i, singular_val) for i in c_index_dict[index])
+        if not all(reduce_grid(values, i, singular_val) for i in c_index_dict[index]):
             return False
     for arr in index_dict[index]:
-        other_places = [i for i in arr if val in values[index]]
+        other_places = [i for i in arr if val in values[i]]
         if len(other_places) == 0:
             return False
         elif len(other_places) == 1:
-            if not test(values, other_places[0], val)
+            if not test(values, other_places[0], val):
                 return False
     return values
 
 def test(values, index, val):
     other_values = values[index].replace(val, '')
-    if all(reduce(values, index, v) for v in other_values):
+    if all(reduce_grid(values, index, v) for v in other_values):
         return values
-    else
+    else:
         return False
 
 ##### TRANSFORM GRID #####
+def obtain_values(grid):
+    vals = [v for v in grid if v in numbers or '0.']
+    return dict(zip(super_matrix, vals))
+
 def transform_grid(grid):
-    p_values = dict((index, numbers) for index in super_matrix)
-
-
-def isPossible(x, y, n, grid):
-    grid_x = int(x/3)*3
-    grid_y = int(y/3)*3
-    if n in grid[y]:
-        return False
-    for i in range(9):
-        if grid[i][x] == n:
+    values = dict((index, numbers) for index in super_matrix)
+    for index, val in obtain_values(grid).items():
+        if val in numbers and not test(values, index, val):
             return False
-    for j in range(3):
-        for i in range(3):
-            if grid[j+grid_y][i+grid_x] == n:
-                return False
-    return True
+    return values
         
-
+##### BACKTRACE ALGORITHM #####
 def backtrace(p_values):
-    for y in range(9):
-        for x in range(9):
-            if grid[y][x] == 0:
-                for n in range(1,10):
-                    if isPossible(x, y, n, grid):
-                        grid[y].pop(x)
-                        grid[y].insert(x, n)
-                        backtrace_solution(grid)
-                        grid[y].pop(x)
-                        grid[y].insert(x, 0)
-                return
-    m = list(map(list, grid))
-    print_sudoku(m)
-    ans.append(m)
-    return
+    if p_values is False:
+        return False
+    if all(len(p_values[index]) == 1 for index in super_matrix):
+        return p_values
+    l, index = min((len(p_values[index]), index) for index in super_matrix if len(p_values[index]) > 1)
+    return ret_one(backtrace(test(p_values.copy(), index, val)) for val in p_values[index])
 
-def solve(grid):
-    p_values = transform_grid(grid)
-    return search(p_values)
+##### AUXILIARY FUNCTION #####
+def ret_one(values):
+    for v in values:
+        if v:
+            return v
+    return False
 
+##### SOLVE FUNCTION #####
+def solve(grid, t_threshold=0.0):
+    start_t = time.clock()
+    values = backtrace(transform_grid(grid))
+    delta_t = time.clock() - start_t
+    if t_threshold is not None and delta_t > t_threshold:
+        print("PUZZLE:")
+        show(obtain_values(grid))
+        print("\nSOLUTION:")
+        if values:
+            show(values)
+    print('\n============================================\n')
+    values = not not values
+    return (delta_t, values)
+
+def solve_wrapper(grids, t_threshold=0.0):
+    times, results = zip(*[solve(grid) for grid in grids])
+    num = len(times)
+    if num > 1:
+        print("Solved %d of %d puzzles (avg %.5f secs, max %.5f secs)." % (
+            sum(results), num, sum(times)/num, max(times)))
 
 if __name__ == "__main__":
-    s = "4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......"
-    matrix2 = []
-    for i in range(len(s)):
-        if i%9 == 0:
-            matrix2.append([])
-        temp = 0 if s[i] == "." else int(s[i]) 
-        matrix2[int(i/9)].append(temp)
-    matrix = [[2, 0, 7, 0, 0, 0, 0, 6, 8],
-              [0, 9, 0, 6, 8, 7, 3, 0, 2],
-              [8, 0, 0, 2, 5, 0, 1, 9, 0],
-              [3, 1, 0, 0, 0, 9, 6, 0, 0],
-              [0, 0, 0, 0, 6, 0, 7, 0, 4],
-              [0, 7, 4, 0, 0, 8, 2, 1, 9],
-              [0, 0, 0, 0, 9, 1, 4, 0, 0],
-              [0, 3, 0, 0, 0, 0, 8, 5, 1],
-              [7, 0, 0, 0, 4, 0, 0, 0, 6]]
-    backtrace_solution(matrix)
+    f = open(args.file, 'r')
+    grids = f.read().strip().split('\n')
+    f.close()
+    solve_wrapper(grids, None)
+   
