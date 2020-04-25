@@ -1,4 +1,5 @@
 ##### UNIVERSAL UTILITY #####
+
 # Simple function to print sudoku puzzles
 def show(values, outfile):
     max_width = 1+max(len(values[index]) for index in super_matrix)
