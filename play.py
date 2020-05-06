@@ -1,44 +1,100 @@
-from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM
+from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM, RIGHT
+import argparse
+import numpy as np
+import time
+from solve import solve
 
 MARGINS = 25
 SQUARE = 50
 DIMENSION = 9*SQUARE + 2*MARGINS
 
 class SudokuBoard(object):
-    def __init__(self, infile=0):
-        self.infile = infile
-        self.init_puzzle = '0'*81
-    def solve():
-        self.infile = 1
+    def __init__(self, init_board):
+        self.infile = init_board
+        self.solved = False
+    
+    def init_board(self):
+        self.init_puzzle = [0]*81
+        if self.infile != None:
+            for i in range(81):
+                self.init_puzzle[i] = 0 if self.infile[i] == '.' else int(self.infile[i])
+        self.puzzle = self.init_puzzle
+
+    def solve(self):
+        if not self.solved:
+            self.init_puzzle = self.puzzle
+            print(self.init_puzzle)
+            time, solution = solve(self.puzzle, 0)
+            self.puzzle = solution
+            self.solved = True
 
 class SudokuUI(Frame):
     def __init__(self, root, board):
         self.board = board
         self.root= root
         Frame.__init__(self, root)
-        # self.row = 0      only necessary if we want a cursor or square highlighted
-        # self.col = 0
+        self.row = 0  
+        self.col = 0
         self.__init_interface()
     
     def __init_interface(self):
-        self.root.title = "Sudoku Board"
+        self.root.title("Sudoku Board")
         self.pack(fill=BOTH, expand=1)
         self.canvas = Canvas(self, width=DIMENSION, height=DIMENSION)
         self.canvas.pack(fill=BOTH, side=TOP)
-        solve_button = Button(self, text="Solve", command=self.board.solve)
-        solve_button.pack(fill=BOTH, side=BOTTOM)
+
+        # Button Controls
+        solve_button = Button(self, text="Clear Game", command=self.__clear_game)
+        solve_button.pack(fill=BOTH, side=RIGHT)
+        solve_button = Button(self, text="Clear Board", command=self.__clear)
+        solve_button.pack(fill=BOTH, side=RIGHT)
+        solve_button = Button(self, text="Solve", command=self.__solve)
+        solve_button.pack(fill=BOTH, side=RIGHT)
+        
+        self.canvas.bind("<Button-1>", self.__click)
+        self.canvas.bind("<Key>", self.__key_press)
         
         self.__draw_grid()
         self.__draw_board()
 
-        self.canvas.bind("<Button-1>", self.__click)
-        self.canvas.bind("<Key>", self.__key_press)
+    def __clear(self):
+        self.board.init_board()
+        self.board.solved = False
+        self.__draw_board()
+
+    def __clear_game(self):
+        self.board.solved = False
+        self.board.puzzle = [0] * 81
+        self.__draw_board()
+
+    def __solve(self):
+        self.board.solve()
+        self.__draw_board()
     
     def __click(self, event):
-        print("click")
+        x = event.x
+        y = event.y
+
+        if MARGINS < x < DIMENSION - MARGINS and MARGINS < y < DIMENSION - MARGINS:
+            self.canvas.focus_set()
+            row = int((y-MARGINS)/SQUARE)
+            col = int((x-MARGINS)/SQUARE)
+            if (row, col) == (self.row, self.col):
+                self.row, self.col = -1, -1
+            else:
+                self.row, self.col = row, col
+        else:
+            self.row, self.col = -1, -1
+        
+        self.__draw_selector()
 
     def __key_press(self, event):
-        print("keys")
+        c = event.char
+        if self.row >= 0 and self.col >= 0 and c in '01234567889':
+            self.board.puzzle[self.row * 9 + self.col] = int(c)
+            self.row, self.col = -1, -1
+            self.__draw_board()
+            self.__draw_selector()
     
     def __draw_grid(self):
         for i in range(10):
@@ -60,14 +116,34 @@ class SudokuUI(Frame):
             i = index % 9
             j = int(index / 9)
             init = self.board.init_puzzle[index]
-            color = "black"
+            ans = self.board.puzzle[index]
+            if ans != 0:
+                color = "black" if ans == init else "blue"
 
-            x = MARGINS + (j * SQUARE) + (SQUARE / 2)
-            y = MARGINS + (i * SQUARE) + (SQUARE / 2)
-            self.canvas.create_text(x, y, text=init, tags="newbies", fill=color)
+                x = MARGINS + (i * SQUARE) + (SQUARE / 2)
+                y = MARGINS + (j * SQUARE) + (SQUARE / 2)
+                self.canvas.create_text(x, y, text=ans, tags="newbies", fill=color)
+
+    def __draw_selector(self):
+        self.canvas.delete("select")
+        if self.row >= 0 and self.col >= 0:
+            x0 = MARGINS + (self.col * SQUARE) + 1
+            x1 = MARGINS + ((self.col + 1) * SQUARE) -1
+            y0 = MARGINS + (self.row * SQUARE) + 1
+            y1 = MARGINS + ((self.row + 1) * SQUARE) -1
+            self.canvas.create_rectangle(x0, y0, x1, y1, outline="red", tags="select")
+
+def parse_arguments():
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--board", help="Sudoku Board", type=str)
+    args = arg_parser.parse_args()
+    return args.board if args.board and len(args.board) == 81 else None
 
 if __name__ == '__main__':
-    board = SudokuBoard()
+    board = parse_arguments()
+    board = SudokuBoard(board)
+    board.init_board()
+
     root = Tk()
     SudokuUI(root, board)
     root.mainloop()
