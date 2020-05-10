@@ -23,7 +23,6 @@ class SudokuBoard(object):
     def solve(self):
         if not self.solved:
             self.init_puzzle = self.puzzle
-            print(self.init_puzzle)
             time, solution = solve(self.puzzle, 0)
             self.puzzle = solution
             self.solved = True
