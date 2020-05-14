@@ -2,7 +2,7 @@ from tkinter import Tk, Canvas, Frame, Button, BOTH, TOP, BOTTOM, RIGHT
 import argparse
 import numpy as np
 import time
-from solve import solve
+from algorithms.constrained_backtrace import solve
 
 MARGINS = 25
 SQUARE = 50
