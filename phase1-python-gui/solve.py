@@ -2,7 +2,32 @@ import argparse
 import numpy as np
 import time
 import sys
-from utils import *
+
+##### UNIVERSAL UTILITY #####
+
+#####   DATA STRUCTURES FOR   #####
+##### CONSTRAINED BACKTRACING #####
+# Function to take cross product of two vectors
+def combine(X, Y):
+    return [x+y for x in X for y in Y]
+
+### SET UP ###
+numbers         = '123456789'                               # Columns Values          A1 A2 A3 A4 A5..  
+chars           = 'ABCDEFGHI'                               # Rows Values             B1 B2 B3 B4 B5..
+super_matrix    = combine(chars, numbers)                   # A1 - I9 Matrix          C1 C2 C3 C4 C5..        
+master_rows     = [combine(chars, n) for n in numbers]      # Array of all rows       [[A1-9], ..., [I1-9]]
+master_cols     = [combine(c, numbers) for c in chars]      # Array of all cols       [[A-I1], ..., [A-I9]]
+master_squares  = [combine(cs, ns) for cs in ('ABC', 'DEF','GHI') for ns in ('123', '456', '789')]
+
+### REAL STUFF ###
+# master_list   - holds combination of all rows, cols and squares
+master_list     = (master_rows + master_cols + master_squares)
+
+# index_dict    - dictionary correlating every square to their impacted squares
+index_dict      = dict((index, [s for s in master_list if index in s]) for index in super_matrix)
+
+# c_index_dict  - cleaned up dictionary removing self and duplicates
+c_index_dict    = dict((index, set(sum(index_dict[index],[])) - set([index])) for index in super_matrix)
 
 ##### SUDOKU CONSTRAINTS #####
 def reduce_grid(values, index, val):
@@ -60,54 +85,11 @@ def ret_one(values):
     return False
 
 ##### SOLVE FUNCTION #####
-def solve(grid, t_threshold=0.0, ):
+def solve(grid, t_threshold=0.0):
+    grid = ''.join(map(str, grid))
     start_t = time.clock()
     values = backtrace(transform_grid(grid))
     delta_t = time.clock() - start_t
-    if t_threshold is not None and delta_t > t_threshold:
-        print("PUZZLE:", file = outfile)
-        show(obtain_values(grid), outfile)
-        print("\nSOLUTION:", file = outfile)
-        if values:
-            show(values, outfile)
-    print('\n============================================\n', file = outfile)
-    values = not not values
-    return (delta_t, values)
-
-def solve_wrapper(grids, t_threshold=0.0):
-    times, results = zip(*[solve(grid) for grid in grids])
-    num = len(times)
-    if num > 1:
-        print("Solved %d of %d puzzles (avg %.5f secs, max %.5f secs)." % (
-            sum(results), num, sum(times)/num, max(times)))
-    if num == 1:
-        print("Puzzle solved in %.5f secs" % (times[0]))
-
-##### ARGUMENT PARSING #####
-parser = argparse.ArgumentParser(description='Sudoku Solver')
-parser.add_argument("--puzzle", "-p", type=str, help='Puzzle in \'.123456789\' format')
-parser.add_argument("--file", "-f", type=str, help='Input File')
-parser.add_argument("--output", "-o", type=str, help='Output File')
-args = parser.parse_args()
-
-##### MAIN #####
-if __name__ == "__main__":
-    if not args.file and not args.puzzle:
-        print("Please use --puzzle or --file to insert a puzzle(s)\n")
-        sys.exit()
-    if args.output:
-        outfile = open(args.output, 'w')
-    elif args.file:
-        outfile = open('answer.txt', 'w')
-    else:
-        outfile = sys.stdout
-    if args.puzzle:
-        grids = [args.puzzle]
-        solve_wrapper(grids, None)
-    if args.file:
-        f = open(args.file, 'r')
-        grids = f.read().strip().split('\n')
-        f.close()
-        solve_wrapper(grids, None)
-    if args.output:
-        outfile.close()
+    
+    ans = [int(values[c]) for c in super_matrix]
+    return (delta_t, ans)
