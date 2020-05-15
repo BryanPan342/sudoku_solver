@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-filter = False
+filter = True
 
 image_path = './images/'
 image_name = 'real_life.png'
@@ -12,7 +12,7 @@ hough_path = './hough/h-'
 img = cv2.imread(image_path+image_name)
 
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-edges = cv2.Canny(gray,90,150,apertureSize = 3)
+edges = cv2.Canny(gray,50,150,apertureSize = 3)
 kernel = np.ones((3,3),np.uint8)
 edges = cv2.dilate(edges,kernel,iterations = 1)
 kernel = np.ones((5,5),np.uint8)
@@ -61,6 +61,8 @@ if filter:
                 line_flags[indices[j]] = False # if it is similar and have not been disregarded yet then drop it now
 
 print('number of Hough lines:', len(lines))
+
+print(lines)
 
 filtered_lines = []
 
